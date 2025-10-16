@@ -1,62 +1,115 @@
-# 论文标题 (Paper Title)
+Dual-granularity Sinkhorn Distillation for Enhanced Learning from Long-tailed Noisy Data
 
-> **作者 (Authors):** 
-> **会议/期刊 (Venue):** 
-> **年份 (Year):** 
-> **链接 (Link):** [Paper](URL) | [Code](URL) | [Project](URL)
+
+> **链接 (Link):** [Paper](https://arxiv.org/abs/2510.08179) | [Code](URL) | [Project](URL)
 
 ---
 
 ## 📌 基本信息
 
-- **研究领域：** RAG / LLM / Information Retrieval / ...
-- **论文类型：** Method / Survey / Application / Benchmark
-- **阅读日期：** YYYY-MM-DD
-- **阅读状态：** ⬜ 待读 / 🔄 阅读中 / ✅ 已完成
-
----
-
-## 🎯 核心问题
-
-*这篇论文要解决什么问题？为什么这个问题重要？*
-
+- **研究领域：** lnl ltl
+- **论文类型：** Method
+- **阅读日期：** 2025-10-14
+- **阅读状态：**  ✅ 已完成
 
 
 ---
 
 ## 💡 核心思想
 
-*用1-3句话概括论文的核心方法或贡献*
-
-
+D-SINK 的核心流程是，在训练目标模型 $f$ 的过程中，引入一组代理标签 (surrogate proxy labels) $Q$ 作为中间桥梁。这组代理标签 $Q$ 被优化以同时满足两个条件，从而巧妙地融合 $f_L$ 和 $f_N$ 的知识。
 
 ---
 
 ## 🏗️ 方法架构
 
-### 整体框架
 
-*描述方法的整体架构*
+### 关键名词解释
 
-![架构图](./images/paper_name_architecture.png)
+#### 1. 双粒度
 
-### 关键组件
+这是本文方法的核心理念。作者指出，类别不平衡和标签噪声是两个发生在不同“粒度”上的问题 。
 
-#### 1. 组件名称
+类别不平衡：是一个**分布层面（distribution-level）**的问题，它描述的是整个数据集的宏观统计特性 。
 
-*描述关键组件的设计*
+标签噪声：是一个**样本层面（sample-level）**的问题，它影响的是单个数据样本的标注是否正确 。
 
-#### 2. 组件名称
+D-SINK框架正是利用了这一区别，让不同的辅助模型在各自擅长的粒度上发挥作用 。
 
-*描述另一个关键组件*
+#### 2. 辛恩霍恩蒸馏 (Sinkhorn Distillation)
+
+这是一种基于**最优传输（Optimal Transport, OT）**理论的知识蒸馏技术 。
+
+最优传输 (OT)：可以理解为计算将一堆沙子（一个概率分布）用最小的代价搬运成另一堆沙子（另一个概率分布）的最优搬运方案 。在机器学习中，它被用来衡量和对齐两个概率分布。
+
+辛恩霍恩 (Sinkhorn) 算法：是一种高效计算最优传输问题的近似算法，它速度快、可微分，非常适合用在深度学习中 。
+
+因此，“辛恩霍恩蒸馏”就是利用辛恩霍恩算法作为工具，将知识（概率分布）从一个或多个教师模型传递给学生模型。
+
+#### 3. 辅助模型 ($f_L$ 和 $f_N$)
+指本文中使用的两个“弱”专家模型，它们是预先训练好的、仅针对单一问题的模型 
+$f_L$：一个使用**长尾学习（LTL）**算法训练的模型，它擅长处理类别不平衡问题，但对标签噪声束手无策。
+$f_N$：一个使用**带噪学习（NLL）**算法训练的模型，它擅长识别和处理标签噪声，但无法解决类别不平衡问题。
 
 ### 算法流程
 
-```
-1. 步骤1
-2. 步骤2
-3. 步骤3
-```
+核心思想：让抗噪声模型 $f_N$ 在样本粒度上指导目标模型 $f$；让抗不平衡模型 $f_L$ 在分布粒度上指导 $f$。
+
+代理标签 $Q$ 的作用：$Q$ 是一个 $C\times N$ 的矩阵（$C$ 为类别数，$N$ 为批次大小），其中每一列 $q_i$ 代表一个样本 $x_i$ 的软标签（概率分布）。
+
+它需要同时满足：
+
+- 样本层面：对于每个样本 $x_i$，其代理标签 $q_i$ 应尽可能接近抗噪声模型的预测 $f_N(x_i)$。
+- 分布层面：整个批次的代理标签 $Q$ 聚合得到的类别分布（即 $\sum_{i=1}^{N} q_{i}$）应与抗不平衡模型预测的整体类别分布 $\sum_{i=1}^{N} f_{L}(x_{i})$ 一致。
+
+目标函数由基础损失与蒸馏损失构成：
+
+$$
+\mathcal{L}_{Overall} = \mathcal{L}_{Base} + \alpha\,\mathcal{L}_{D\text{-}SINK}
+$$
+
+其中，$\mathcal{L}_{Base}$ 可为标准交叉熵或针对长尾带噪场景的其他损失；$\alpha$ 为权重超参数。
+
+核心的 D-SINK 蒸馏损失定义为：
+
+$$
+\begin{aligned}
+\mathcal{L}_{D\text{-}SINK}
+&= \frac{1}{N}\sum_{i=1}^{N} \Big[
+\underbrace{D_{KL}\big(q_{i} \\\|\\\, f_{N}(x_{i})\big)}_{\text{1. 样本层面：Q 对齐 } f_N}
++ \underbrace{D_{KL}\big(q_{i} \\\|\\\, f(x_{i})\big)}_{\text{3. 知识蒸馏：f 学习 Q}}
+\Big]
+\end{aligned}
+$$
+
+代理标签 $Q$ 的约束条件：
+
+$$
+\begin{aligned}
+\text{s.t.}\quad
+& \underbrace{Q\, \mathbf{1}_{N} = \sum_{i=1}^{N} f_{L}(x_{i})}_{\text{2. 分布层面：Q 对齐 } f_L}, \\
+& Q^{\top} \, \mathbf{1}_{C} = \mathbf{1}_{N}
+\end{aligned}
+$$
+
+说明：$D_{KL}$ 为 KL 散度。第一项促使每个 $q_i$ 模仿 $f_N$ 的预测，获得抗噪特性；第二项为蒸馏项，使目标模型 $f$ 学习优化后的 $q_i$。第一个约束使 $Q$ 的整体类别分布与 $f_L$ 一致，引入抗长尾特性；第二个约束保证每个 $q_i$ 为合法概率分布（各项之和为 1）。
+
+双层优化（Bi-level Optimization）：
+
+- 内循环（Inner Loop）：固定 $Q$，用梯度下降更新模型 $f$ 参数，最小化 $\mathcal{L}_{Overall}$。
+- 外循环（Outer Loop）：固定模型 $f$ 参数，求解最优 $Q$，最小化 $\mathcal{L}_{D\text{-}SINK}$ 并满足约束。
+
+将 $Q$ 的求解重写为熵正则化的最优传输（OT）问题：
+
+$$
+\begin{aligned}
+\min_{Q}\quad & \langle Q, P \rangle + 2\sum_{i=1}^{N} q_{i} \cdot \log q_{i} \\
+\text{s.t.}\quad & Q\, \mathbf{1}_{N} = \sum_{i=1}^{N} f_{L}(x_{i}), \\
+& Q^{\top} \, \mathbf{1}_{C} = \mathbf{1}_{N}
+\end{aligned}
+$$
+
+其中，$P$ 为代价矩阵，$p_i = -\log f_N(x_i) - \log f(x_i)$ 表示将 $q_i$ 分配给样本 $x_i$ 的成本；$\langle Q, P \rangle$ 为总运输成本；$2\sum q_i \cdot \log q_i$ 为熵正则化项，使问题可用辛恩霍恩（Sinkhorn-Knopp）算法高效求解，最终得到最优 $Q$。
 
 ---
 
