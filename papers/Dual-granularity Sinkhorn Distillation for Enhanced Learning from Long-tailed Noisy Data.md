@@ -64,15 +64,18 @@ $f_N$：一个使用**带噪学习（NLL）**算法训练的模型，它擅长�
 
 目标函数由基础损失与蒸馏损失构成：
 
-$$
+
+\[
 \mathcal{L}_{Overall} = \mathcal{L}_{Base} + \alpha\,\mathcal{L}_{D\text{-}SINK}
-$$
+\]
+
 
 其中，$\mathcal{L}_{Base}$ 可为标准交叉熵或针对长尾带噪场景的其他损失；$\alpha$ 为权重超参数。
 
 核心的 D-SINK 蒸馏损失定义为：
 
-$$
+
+\[
 \begin{aligned}
 \mathcal{L}_{D\text{-}SINK}
 &= \frac{1}{N}\sum_{i=1}^{N} \Big[
@@ -80,17 +83,20 @@ $$
 + \underbrace{D_{KL}\big(q_{i} \\\|\\\, f(x_{i})\big)}_{\text{3. 知识蒸馏：f 学习 Q}}
 \Big]
 \end{aligned}
-$$
+\]
+
 
 代理标签 $Q$ 的约束条件：
 
-$$
+
+\[
 \begin{aligned}
 \text{s.t.}\quad
 & \underbrace{Q\, \mathbf{1}_{N} = \sum_{i=1}^{N} f_{L}(x_{i})}_{\text{2. 分布层面：Q 对齐 } f_L}, \\
 & Q^{\top} \, \mathbf{1}_{C} = \mathbf{1}_{N}
 \end{aligned}
-$$
+\]
+
 
 说明：$D_{KL}$ 为 KL 散度。第一项促使每个 $q_i$ 模仿 $f_N$ 的预测，获得抗噪特性；第二项为蒸馏项，使目标模型 $f$ 学习优化后的 $q_i$。第一个约束使 $Q$ 的整体类别分布与 $f_L$ 一致，引入抗长尾特性；第二个约束保证每个 $q_i$ 为合法概率分布（各项之和为 1）。
 
@@ -101,13 +107,15 @@ $$
 
 将 $Q$ 的求解重写为熵正则化的最优传输（OT）问题：
 
-$$
+
+\[
 \begin{aligned}
 \min_{Q}\quad & \langle Q, P \rangle + 2\sum_{i=1}^{N} q_{i} \cdot \log q_{i} \\
 \text{s.t.}\quad & Q\, \mathbf{1}_{N} = \sum_{i=1}^{N} f_{L}(x_{i}), \\
 & Q^{\top} \, \mathbf{1}_{C} = \mathbf{1}_{N}
 \end{aligned}
-$$
+\]
+
 
 其中，$P$ 为代价矩阵，$p_i = -\log f_N(x_i) - \log f(x_i)$ 表示将 $q_i$ 分配给样本 $x_i$ 的成本；$\langle Q, P \rangle$ 为总运输成本；$2\sum q_i \cdot \log q_i$ 为熵正则化项，使问题可用辛恩霍恩（Sinkhorn-Knopp）算法高效求解，最终得到最优 $Q$。
 
@@ -183,9 +191,11 @@ $$
 
 ### 核心公式
 
-$$
+
+\[
 formula
-$$
+\]
+
 
 ### 关键段落
 
