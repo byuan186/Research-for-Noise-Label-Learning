@@ -75,9 +75,11 @@ Identifying Mislabeled Data using the Area Under the Margin Ranking
 
 该时刻的边距 $M^{(t)}(x, y)$ 按以下公式计算：
 
-$$
+
+\[
 M^{(t)}(x, y) = z^{(t)}_{y}(x) - \max_{i \ne y} z^{(t)}_{i}(x)
-$$
+\]
+
 
 公式说明:
 - $z^{(t)}_{y}(x)$：对应标签 $y$ 的 logit 分量值。
@@ -90,18 +92,20 @@ $$
 
 训练结束后，每个样本的 AUM 值就是它所有边距值的平均值：
 
-$$
-\operatorname{AUM}(x, y) = \frac{1}{T} \sum_{t=1}^{T} M^{(t)}(x, y)
-$$
+
+\[
+\mathrm{AUM}(x, y) = \frac{1}{T} \sum_{t=1}^{T} M^{(t)}(x, y)
+\]
+
 
 公式说明:
 
-- $\operatorname{AUM}(x, y)$ 是在 $T$ 个 epoch 上边距的平均值，起到平滑训练噪声的作用。
+- $\mathrm{AUM}(x, y)$ 是在 $T$ 个 epoch 上边距的平均值，起到平滑训练噪声的作用。
 
 
 第二步：构建阈值样本并学习阈值
 
-我们的目标是找到一个阈值 $\alpha$，当某个样本的 $\operatorname{AUM}(x,y) \le \alpha$ 时，就认为它是错误标签。这个阈值 $\alpha$ 不能凭空设定，因为它和具体的数据集、模型都有关 。
+我们的目标是找到一个阈值 $\alpha$，当某个样本的 $\mathrm{AUM}(x,y) \le \alpha$ 时，就认为它是错误标签。这个阈值 $\alpha$ 不能凭空设定，因为它和具体的数据集、模型都有关 。
 
 构造阈值样本
 
@@ -130,9 +134,9 @@ $$
 
 识别
 
-现在你有了一个数据驱动的阈值 $\alpha$。遍历所有未被选为阈值样本的原始数据，计算它们的 $\operatorname{AUM}$ 值。
+现在你有了一个数据驱动的阈值 $\alpha$。遍历所有未被选为阈值样本的原始数据，计算它们的 $\mathrm{AUM}$ 值。
 
-如果一个样本 (x, y) 的 $\operatorname{AUM}(x, y) \le \alpha$，那么它就被识别为错误标签样本 。
+如果一个样本 (x, y) 的 $\mathrm{AUM}(x, y) \le \alpha$，那么它就被识别为错误标签样本 。
 
 完整流程
 
